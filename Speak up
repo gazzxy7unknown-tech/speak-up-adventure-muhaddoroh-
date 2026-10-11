@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speak Up Adventure</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  color: white;
+  background: linear-gradient(145deg, #171747, #49318b);
+  min-height: 100vh;
+}
+.game {
+  max-width: 480px;
+  margin: auto;
+  background: #252451;
+  border: 1px solid #6861a9;
+  border-radius: 24px;
+  padding: 22px;
+  text-align: center;
+}
+h1 { color: #ffe477; font-size: 27px; }
+.hero { font-size: 65px; margin: 15px; }
+.badge {
+  background: #3b3970;
+  padding: 9px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+h2 { font-size: 21px; }
+p { line-height: 1.6; color: #e5e4ff; }
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #f8d76a;
+  color: #242044;
+}
+button:active { transform: scale(.98); }
+.answer {
+  background: #393765;
+  color: white;
+  border: 1px solid #7771ad;
+  text-align: left;
+  line-height: 1.4;
+}
+.answer:disabled { opacity: .8; }
+#feedback { font-weight: bold; }
+.small { font-size: 13px; color: #c7c4ed; }
+</style>
+</head>
+<body>
+<div class="game">
+  <div class="badge">
+    ⭐ Skor: <span id="score">0</span>
+    &nbsp; | &nbsp; 🗺️ Level: <span id="level">1</span>
+  </div>
+
+  <h1>🎤 SPEAK UP<br>ADVENTURE</h1>
+  <div class="hero" id="hero">🧑‍🎓</div>
+  <h2 id="title">Misi Pertama!</h2>
+  <p id="story">
+    Selamat datang, petualang!
+    Siap menjadi pembicara hebat?
+  </p>
+  <div id="answers"></div>
+  <p id="feedback" aria-live="polite"></p>
+  <button id="next" hidden onclick="nextLevel()">
+    Lanjutkan Petualangan ➜
+  </button>
+  <p class="small" id="progress">Selesaikan semua tantangan!</p>
+</div>
+
+<script>
+const missions = [
+  {
+    title: "Level 1: Berani Memulai",
+    hero: "😰",
+    story: "Kamu diminta presentasi di depan kelas. Kamu gugup dan tanganmu dingin. Apa yang sebaiknya kamu lakukan?",
+    answers: [
+      "A. Langsung kabur dari kelas",
+      "B. Tarik napas, siapkan diri, lalu mulai berbicara",
+      "C. Menunduk dan berbicara secepat mungkin"
+    ],
+    correct: 1,
+    good: "Hebat! Mengatur napas dan menyiapkan diri bisa membantumu lebih tenang.",
+    bad: "Belum tepat! Rasa gugup itu wajar. Coba pilih cara yang membantumu lebih tenang."
+  },
+  {
+    title: "Level 2: Kontak Mata",
+    hero: "👀",
+    story: "Saat presentasi, teman-teman memperhatikanmu. Bagaimana cara menunjukkan rasa percaya diri?",
+    answers: [
+      "A. Terus melihat lantai",
+      "B. Membelakangi audiens",
+      "C. Sesekali menatap audiens dengan nyaman"
+    ],
+    correct: 2,
+    good: "Betul! Kontak mata yang wajar membantu membangun hubungan dengan audiens.",
+    bad: "Coba lagi! Arahkan perhatianmu kepada audiens dengan cara yang nyaman."
+  },
+  {
+    title: "Level 3: Lupa Materi",
+    hero: "🤔",
+    story: "Kamu tiba-tiba lupa kalimat berikutnya saat berpidato. Apa yang kamu lakukan?",
+    answers: [
+      "A. Berhenti sebentar, tenangkan diri, lalu lanjutkan dari inti pesan",
+      "B. Panik dan menyerah",
+      "C. Menyalahkan penonton"
+    ],
+    correct: 0,
+    good: "Keren! Jeda sejenak itu boleh. Kamu bisa melanjutkan dari ide utama.",
+    bad: "Jangan panik! Jeda sebentar dan ingat kembali pesan utamamu."
+  },
+  {
+    title: "Level 4: Suara Jelas",
+    hero: "📢",
+    story: "Audiens di belakang bilang suaramu kurang terdengar. Apa tindakan terbaik?",
+    answers: [
+      "A. Berteriak sekuat-kuatnya",
+      "B. Berbicara lebih jelas dan mengatur volume suara",
+      "C. Berhenti presentasi"
+    ],
+    correct: 1,
+    good: "Mantap! Suara yang jelas dan volume yang sesuai membuat pesan mudah dipahami.",
+    bad: "Coba pilih cara yang membuat suaramu jelas tanpa harus berteriak."
+  },
+  {
+    title: "Level 5: Pembicara Hebat",
+    hero: "🏆",
+    story: "Presentasimu selesai. Apa yang bisa kamu lakukan agar kemampuanmu terus berkembang?",
+    answers: [
+      "A. Tidak mau mencoba presentasi lagi",
+      "B. Menganggap semua kritik sebagai hinaan",
+      "C. Meminta masukan dan berlatih lagi"
+    ],
+    correct: 2,
+    good: "Luar biasa! Pembicara hebat terus belajar dan menerima masukan.",
+    bad: "Masukan yang membangun dan latihan bisa membantumu berkembang."
+  }
+];
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+function showMission() {
+  answered = false;
+  const m = missions[current];
+
+  document.getElementById("level").textContent = current + 1;
+  document.getElementById("title").textContent = m.title;
+  document.getElementById("hero").textContent = m.hero;
+  document.getElementById("story").textContent = m.story;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("next").hidden = true;
+  document.getElementById("progress").textContent =
+    "Tantangan " + (current + 1) + " dari " + missions.length;
+
+  const area = document.getElementById("answers");
+  area.innerHTML = "";
+
+  m.answers.forEach((answer, index) => {
+    const button = document.createElement("button");
+    button.textContent = answer;
+    button.className = "answer";
+    button.onclick = () => chooseAnswer(index);
+    area.appendChild(button);
+  });
+}
+
+function chooseAnswer(index) {
+  if (answered) return;
+  answered = true;
+
+  const m = missions[current];
+  const buttons = document.querySelectorAll(".answer");
+
+  if (index === m.correct) {
+    score += 10;
+    document.getElementById("feedback").textContent =
+      "✅ " + m.good + " (+10 poin)";
+  } else {
+    document.getElementById("feedback").textContent =
+      "💡 " + m.bad;
+  }
+
+  document.getElementById("score").textContent = score;
+  buttons.forEach(button => button.disabled = true);
+
+  document.getElementById("next").hidden = false;
+  document.getElementById("next").textContent =
+    current === missions.length - 1
+      ? "Lihat Hasil 🏆"
+      : "Lanjutkan Petualangan ➜";
+}
+
+function nextLevel() {
+  if (!answered) return;
+
+  current++;
+
+  if (current >= missions.length) {
+    document.getElementById("hero").textContent = "🏆";
+    document.getElementById("title").textContent =
+      "Petualangan Selesai!";
+    document.getElementById("story").textContent =
+      "Skor kamu " + score + " dari 50 poin. Terus berlatih agar makin percaya diri berbicara di depan umum!";
+    document.getElementById("answers").innerHTML = "";
+    document.getElementById("feedback").textContent =
+      score === 50
+        ? "Sempurna! Kamu Master of Speaking!"
+        : "Setiap latihan adalah kemajuan!";
+    document.getElementById("progress").textContent =
+      "Semua misi sudah diselesaikan.";
+    document.getElementById("next").textContent =
+      "Main Lagi 🔄";
+    document.getElementById("next").onclick = restart;
+    return;
+  }
+
+  showMission();
+}
+
+function restart() {
+  current = 0;
+  score = 0;
+  document.getElementById("score").textContent = 0;
+  document.getElementById("next").onclick = nextLevel;
+  showMission();
+}
+
+showMission();
+</script>
+</body>
+</html>
